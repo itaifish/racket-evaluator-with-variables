@@ -30,7 +30,8 @@
         ['invocation (eval-invocation expr-data env)]
         ['let (eval-let expr-data env)]
         ['define (eval-define expr-data env)]
-        [else (raise "ERROR")])))
+        ['lambda (eval-lambda expr-data env)]
+        [else (error (~a "Unexpected name: " name))])))
 
 (define (eval-atom atom env)
   (let* ([atom-data (second atom)]
@@ -52,6 +53,30 @@
          [expr-to-eval (fourth define-expr)])
     (hash-set! global-env (second name) (eval-expr expr-to-eval env)))
   (lookup-name global-env (second (third define-expr))))
+
+;; lambda => lambda LAMBDA OPAREN NAME CPAREN expr
+(define (eval-lambda lambda-expr env)
+  (let* ([name (fourth lambda-expr)]
+         [expr-to-eval (sixth lambda-expr)])
+    (create-lambda-form 'LAMBDA (list (second name)) expr-to-eval env)))
+
+;; Creates A lambda form as a list containing
+;; Lambda's name, list of arguments, body expression, and the local enviornment at the time it is created
+(define (create-lambda-form lambda-name lambda-args lambda-body-expr env)
+  (list lambda-name lambda-args lambda-body-expr env))
+
+(define (eval-lambda-form lambda-form args)
+  (let* ([lambda-name (first lambda-form)]
+         [lambda-args (second lambda-form)]
+         [lambda-body-expr (third lambda-form)]
+         [env (fourth lambda-form)]
+         [updated-env (add-all-to-env env lambda-args args)])
+   (eval-expr lambda-body-expr updated-env)))
+
+(define (add-all-to-env env argsSymbolList argsValList)
+  (if (empty? argsSymbolList)
+      env
+      (add-all-to-env (add-binding env (first argsSymbolList) (first argsValList)) (rest argsSymbolList) (rest argsValList))))
 
 
 (define (eval-string string)
@@ -100,9 +125,9 @@
   (let* ([exprRes (eval-expr-list (third invocation) env)]
          [rator (first exprRes)]
          [rand (rest exprRes)])
-    (if (or (number? rator) (string? rator))
-        rator
-        (apply rator rand))))
+    (cond [(or (number? rator) (string? rator)) rator]
+          [(and (list? rator) (eq? (first rator) 'LAMBDA)) (eval-lambda-form rator rand)]
+          [else (apply rator rand)])))
 
 (define (eval-opt-expr-list optExprList env)
   (if (= (length optExprList) 1)
