@@ -45,13 +45,24 @@
 (define (parse-let)
   (list 'let (consume 'LET) (consume 'OPAREN) (consume 'NAME) (parse-expr) (consume 'CPAREN) (parse-expr)))
 
+;; nameList: NAME optNameList
+(define (parse-name-list)
+  (list 'nameList (consume 'NAME) (parse-opt-nameList)))
+
+;; optNameList: ɛ | nameList
+(define (parse-opt-nameList)
+  (let ([type (peek)])
+    (if (eq? type 'CPAREN)
+        '(optNameList)
+        (list 'optNameList (parse-name-list)))))
+
 ;; define := DEFINE NAME expr
 (define (parse-define)
   (list 'define (consume 'DEFINE) (consume 'NAME) (parse-expr)))
 
-;; lambda := LAMBDA OPAREN NAME CPAREN expr
+;; lambda := LAMBDA OPAREN optNameList CPAREN expr
 (define (parse-lambda)
-  (list 'lambda (consume 'LAMBDA) (consume 'OPAREN) (consume 'NAME) (consume 'CPAREN) (parse-expr)))
+  (list 'lambda (consume 'LAMBDA) (consume 'OPAREN) (parse-opt-nameList) (consume 'CPAREN) (parse-expr)))
   
 ;; atom := NAME | STRING | number
 (define (parse-atom)

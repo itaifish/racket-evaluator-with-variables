@@ -22,6 +22,14 @@
         (eval-expr expr env)
         (eval-opt-expr-list optExprList env))))
 
+;; nameList: 'nameList NAME optNameList
+(define (eval-name-list name-list-expr env)
+  (let* ([name (second name-list-expr)]
+         [optNameList (third name-list-expr)])
+    (cons
+        (second name)
+        (eval-opt-name-list optNameList env))))
+
 (define (eval-expr expr env)
     (let* ([expr-data (second expr)]
            [name (first expr-data)])
@@ -54,11 +62,11 @@
     (hash-set! global-env (second name) (eval-expr expr-to-eval env)))
   (lookup-name global-env (second (third define-expr))))
 
-;; lambda => lambda LAMBDA OPAREN NAME CPAREN expr
+;; lambda => lambda LAMBDA OPAREN optNameList CPAREN expr
 (define (eval-lambda lambda-expr env)
-  (let* ([name (fourth lambda-expr)]
+  (let* ([argsList (eval-opt-name-list (fourth lambda-expr) env)]
          [expr-to-eval (sixth lambda-expr)])
-    (create-lambda-form 'LAMBDA (list (second name)) expr-to-eval env)))
+    (create-lambda-form 'LAMBDA argsList expr-to-eval env)))
 
 ;; Creates A lambda form as a list containing
 ;; Lambda's name, list of arguments, body expression, and the local enviornment at the time it is created
@@ -133,3 +141,8 @@
   (if (= (length optExprList) 1)
       '()
       (eval-expr-list (second optExprList) env)))
+;; optNameList => 'optNameList ɛ | 'optNameList nameList
+(define (eval-opt-name-list optNameList env)
+    (if (= (length optNameList) 1)
+      '()
+      (eval-name-list (second optNameList) env)))
